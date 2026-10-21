@@ -6,14 +6,16 @@ import numpy as np
 
 def extract_z_planes(args):
     ome_path, output_dir, tile_size, level_i = args
+    output_dir = os.path.join(output_dir, os.path.splitext(os.path.basename(ome_path))[0])
+    os.makedirs(output_dir, exist_ok=True)
     basename = os.path.splitext(os.path.basename(ome_path))[0]
     try:
         with tifffile.TiffFile(ome_path) as tif:
             series = tif.series[0]
             level = series.levels[level_i]
             #data = series.asarray()
-            data = level.asarray()
-            z, y, x, c  = data.shape
+            data = level.asarray(out='memmap')
+            *z, y, x, c  = data.shape
             n_vertical_tiles = int(np.ceil(y / tile_size))
             n_horizontal_tiles = int(np.ceil(x / tile_size))
             
@@ -46,7 +48,7 @@ def batch_extract_parallel(input_dir, output_dir, num_workers=None, level=0, til
         print("No NDPI files found.")
         return
 
-    print(f"Processing {len(ome_files)} files with {num_workers or cpu_count()} workers...")
+    print(f"Processing {len(ome_files)} files with {num_workers} workers...")
     if num_workers is not None and num_workers > 1:
         with Pool(processes=num_workers or cpu_count()) as pool:
             pool.map(extract_z_planes, ome_files)

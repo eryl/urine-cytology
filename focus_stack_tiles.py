@@ -30,7 +30,12 @@ def focus_stack_tile(tile_files, output_path):
     # Sort files by Z index
     tile_files = sorted(tile_files, key=lambda f: int(re.search(r'_z(\d+)_', f).group(1)))
 
-    cmd = ['focus-stack', f'--output={output_path}',  *tile_files]
+    cmd = ['focus-stack',
+           '--no-whitebalance',
+           '--threads=4',
+           #'--no-opencl',
+           f'--output={output_path}',
+           *tile_files]
     print(" ".join(cmd))
     try:
         p = subprocess.run(cmd, check=True)
@@ -49,8 +54,11 @@ def process_all_tiles(tile_dir, output_dir, num_workers=1):
     for image_file, image_tiles in tile_groups.items():
             for (y_tile, x_tile), files in image_tiles.items():
                 output_path = os.path.join(output_dir, f"{image_file}_y{y_tile}_x{x_tile}_fused.png")
-                work_package = (files, output_path)
-                work_packages.append(work_package)
+                if not os.path.exists(output_path):
+                    work_package = (files, output_path)
+                    work_packages.append(work_package)
+                else:
+                    print(f"Path already processed: {output_path}")
 
     if num_workers > 1:
         with multiprocessing.Pool(num_workers) as pool:
@@ -68,7 +76,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Focus stack PNG z-tiles in parallel.")
     parser.add_argument("tile_dir", help="Directory with input PNG z-stack tiles")
     parser.add_argument("output_dir", help="Directory to save fused PNG tiles")
-    parser.add_argument("--workers", type=int, default=32, help="Number of parallel threads")
+    parser.add_argument("--workers", type=int, default=4, help="Number of parallel threads")
 
     args = parser.parse_args()
     process_all_tiles(args.tile_dir, args.output_dir, num_workers=args.workers)

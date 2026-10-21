@@ -1,0 +1,6 @@
+flow_threshold: 0.6
+cellprob_threhsold: -2
+norm_percentile:
+  lower: 1
+  upper: 99
+niter_dynamics: 200
